@@ -38,7 +38,10 @@ export default function Home({ onNavigate }) {
       if (!b.nextOpen) return -1
       return a.nextOpen - b.nextOpen
     })
-  const mostUrgent = coursesWithNext[0] || null
+  const filteredCoursesWithNext = hideDailyFixed
+    ? coursesWithNext.filter(c => c.rules?.[0]?.type !== 'daily_fixed')
+    : coursesWithNext
+  const mostUrgent = filteredCoursesWithNext[0] || null
 
   // 달력 이벤트 맵
   const firstOfMonth = new Date(year, month, 1)
@@ -107,6 +110,18 @@ export default function Home({ onNavigate }) {
       {/* 헤더 */}
       <div className="flex items-center justify-between py-4">
         <h1 className="text-lg font-medium text-gray-900">예약 알림</h1>
+        {coursesWithNext.length > 0 && (
+          <button
+            onClick={() => setHideDailyFixed(v => !v)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              hideDailyFixed
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-white text-gray-400 border-gray-200'
+            }`}
+          >
+            매일 예약 가리기
+          </button>
+        )}
       </div>
 
       {/* 경기장 없을 때 */}
@@ -160,7 +175,7 @@ export default function Home({ onNavigate }) {
               )
               const dateObj = new Date(year, month, cell.day)
               const key = dateObj.toDateString()
-              const events = eventMap[key] || []
+              const events = (eventMap[key] || []).filter(ev => !hideDailyFixed || ev.rules?.[0]?.type !== 'daily_fixed')
               const isToday = key === todayStr
               const isPast = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate())
               const isSelected = selectedDay === cell.day
@@ -194,20 +209,8 @@ export default function Home({ onNavigate }) {
       {/* 예약 리스트 */}
       {coursesWithNext.length > 0 && (
         <>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-gray-400 font-medium">
-              {selectedDay ? `${month + 1}월 ${selectedDay}일 예약 오픈` : `${month + 1}월 남은 예약`}
-            </div>
-            <button
-              onClick={() => setHideDailyFixed(v => !v)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                hideDailyFixed
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-400 border-gray-200'
-              }`}
-            >
-              매일 예약 가리기
-            </button>
+          <div className="text-xs text-gray-400 font-medium mb-2">
+            {selectedDay ? `${month + 1}월 ${selectedDay}일 예약 오픈` : `${month + 1}월 남은 예약`}
           </div>
 
           {displayEvents.length === 0 && (

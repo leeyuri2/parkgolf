@@ -8,7 +8,12 @@ function loadMembers() {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) return JSON.parse(saved)
   } catch {}
-  return Array.from({ length: 4 }, () => ({ name: '', phone: '' }))
+  return [
+    { name: '김금옥', phone: '01053475250' },
+    { name: '김미애', phone: '01050490521' },
+    { name: '심원보', phone: '01088607459' },
+    { name: '장정인', phone: '01034587170' },
+  ]
 }
 
 export default function Party() {
