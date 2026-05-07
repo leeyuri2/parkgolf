@@ -5,9 +5,11 @@
  * weekday 기준: 1=월 2=화 3=수 4=목 5=금 6=토 7=일
  */
 
-// JS Date의 getDay()를 1(월)~7(일) 형식으로 변환
+// JS Date의 getDay()를 1(월)~7(일) 형식으로 변환 (한국 시간 기준)
 function toWeekday(date) {
-  const d = date.getDay()
+  // 한국 시간 기준 요일 계산
+  const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  const d = kstDate.getUTCDay()
   return d === 0 ? 7 : d
 }
 
@@ -17,12 +19,18 @@ function timeToMinutes(timeStr) {
   return h * 60 + m
 }
 
-// Date에 시간 문자열 적용 (새 Date 반환)
+// 한국 시간(UTC+9) 기준으로 날짜+시간 적용 (새 Date 반환)
 function applyTime(date, timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
+  // 한국 시간 기준으로 UTC 변환 (UTC+9 = -9시간)
+  const KST_OFFSET = 9 * 60 // 분 단위
   const d = new Date(date)
-  d.setHours(h, m, 0, 0)
-  return d
+  // 해당 날짜의 한국 자정(UTC 기준 전날 15:00)을 기준으로 시간 적용
+  const year = d.getFullYear()
+  const month = d.getMonth()
+  const day = d.getDate()
+  // UTC로 한국 시간 표현: KST h:m = UTC h-9:m
+  return new Date(Date.UTC(year, month, day, h - KST_OFFSET / 60, m, 0))
 }
 
 /**
@@ -48,7 +56,7 @@ export function getNextOpenDates(rule, from = new Date(), count = 3) {
 
     while (results.length < count) {
       for (const day of [...days].sort((a, b) => a - b)) {
-        const candidate = new Date(year, month, day)
+        const candidate = new Date(Date.UTC(year, month, day))
         const openDate = applyTime(candidate, open_time)
         if (openDate > now) {
           results.push(openDate)
@@ -72,7 +80,7 @@ export function getNextOpenDates(rule, from = new Date(), count = 3) {
       let count_wd = 0
       const daysInMonth = new Date(year, month + 1, 0).getDate()
       for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(year, month, d)
+        const date = new Date(Date.UTC(year, month, d))
         if (toWeekday(date) === weekday) {
           count_wd++
           if (count_wd === nth) {
@@ -135,10 +143,12 @@ export function getNextOpenDate(rule, from = new Date()) {
  */
 export function getDdayText(openDate, from = new Date()) {
   if (!openDate) return '-'
-  const today = new Date(from)
-  today.setHours(0, 0, 0, 0)
-  const target = new Date(openDate)
-  target.setHours(0, 0, 0, 0)
+  // 한국 시간 기준으로 날짜 비교
+  const kstOffset = 9 * 60 * 60 * 1000
+  const today = new Date(from.getTime() + kstOffset)
+  today.setUTCHours(0, 0, 0, 0)
+  const target = new Date(openDate.getTime() + kstOffset)
+  target.setUTCHours(0, 0, 0, 0)
   const diff = Math.round((target - today) / 86400000)
 
   if (diff === 0) return '오늘'
@@ -180,12 +190,14 @@ export function getNotifyTimes(openDate, rule) {
  */
 export function formatKoreanDate(date) {
   if (!date) return '-'
-  const month = date.getMonth() + 1
-  const day = date.getDate()
+  // 한국 시간 기준으로 포맷
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  const month = kst.getUTCMonth() + 1
+  const day = kst.getUTCDate()
   const dowNames = ['일', '월', '화', '수', '목', '금', '토']
-  const dow = dowNames[date.getDay()]
-  const h = date.getHours()
-  const m = date.getMinutes()
+  const dow = dowNames[kst.getUTCDay()]
+  const h = kst.getUTCHours()
+  const m = kst.getUTCMinutes()
   const ampm = h < 12 ? '오전' : '오후'
   const hour = h % 12 === 0 ? 12 : h % 12
   const minStr = m > 0 ? ` ${m}분` : ''

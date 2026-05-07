@@ -14,17 +14,20 @@ function timeToMinutes(timeStr) {
   return h * 60 + m
 }
 
-// Date에 시간 문자열 적용
+// 한국 시간(UTC+9) 기준으로 날짜+시간 적용
 function applyTime(date, timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
   const d = new Date(date)
-  d.setHours(h, m, 0, 0)
-  return d
+  const year = d.getUTCFullYear()
+  const month = d.getUTCMonth()
+  const day = d.getUTCDate()
+  return new Date(Date.UTC(year, month, day, h - 9, m, 0))
 }
 
-// JS getDay()를 1(월)~7(일)로 변환
+// 한국 시간 기준 요일 계산
 function toWeekday(date) {
-  const d = date.getDay()
+  const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  const d = kstDate.getUTCDay()
   return d === 0 ? 7 : d
 }
 
@@ -39,7 +42,7 @@ function getNextOpenDate(rule) {
     let month = now.getMonth()
     for (let i = 0; i < 13; i++) {
       for (const day of [...days].sort((a, b) => a - b)) {
-        const openDate = applyTime(new Date(year, month, day), open_time)
+        const openDate = applyTime(new Date(Date.UTC(year, month, day)), open_time)
         if (openDate > now) return openDate
       }
       month++
@@ -55,7 +58,7 @@ function getNextOpenDate(rule) {
       let count = 0
       const daysInMonth = new Date(year, month + 1, 0).getDate()
       for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(year, month, d)
+        const date = new Date(Date.UTC(year, month, d))
         if (toWeekday(date) === weekday) {
           count++
           if (count === nth) {
@@ -171,9 +174,9 @@ export default async function handler(req, res) {
       const tenMinBefore = new Date(nextOpen.getTime() - 10 * 60 * 1000)
 
       const checks = [
-        { time: eveningNotify, label: 'evening', enabled: true, text: `🌙 내일 예약 오픈 알림\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${nextOpen.toLocaleString('ko-KR')}` },
-        { time: oneHourBefore, label: '1h_before', enabled: rule.notify_1h_before !== false, text: `⏰ 1시간 후 예약 오픈!\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${nextOpen.toLocaleString('ko-KR')}` },
-        { time: tenMinBefore, label: '10m_before', enabled: rule.notify_10m_before !== false, text: `🚨 10분 후 예약 오픈!\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${nextOpen.toLocaleString('ko-KR')}` },
+        { time: eveningNotify, label: 'evening', enabled: true, text: `🌙 내일 예약 오픈 알림\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${new Date(nextOpen.getTime() + 9*60*60*1000).toLocaleString('ko-KR', {timeZone: 'UTC'})}` },
+        { time: oneHourBefore, label: '1h_before', enabled: rule.notify_1h_before !== false, text: `⏰ 1시간 후 예약 오픈!\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${new Date(nextOpen.getTime() + 9*60*60*1000).toLocaleString('ko-KR', {timeZone: 'UTC'})}` },
+        { time: tenMinBefore, label: '10m_before', enabled: rule.notify_10m_before !== false, text: `🚨 10분 후 예약 오픈!\n\n⛳ <b>${course.name}</b>\n📅 오픈 시각: ${new Date(nextOpen.getTime() + 9*60*60*1000).toLocaleString('ko-KR', {timeZone: 'UTC'})}` },
       ]
 
       for (const { time, label, enabled, text } of checks) {
